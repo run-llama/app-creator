@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx main.ts"
+    "start": "tsx main.ts",
+    "format": "prettier --write ."
   },
   "keywords": [],
   "author": "",
