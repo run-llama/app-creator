@@ -101,7 +101,6 @@ export function createAgent(model: string): Workflow {
   codeAgent.addStep(CodeEvent, reviewer, { outputs: ReviewEvent });
 
   // Update the llm model with the provided model
-  console.log("Using OpenAI model:", model);
   Settings.llm = new OpenAI({ model, temperature: 1 });
 
   return codeAgent;

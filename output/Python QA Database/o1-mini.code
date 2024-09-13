@@ -1,0 +1,312 @@
+```markdown
+app/
+├── database/
+│   └── db.py
+├── models/
+│   └── qa_model.py
+├── utils/
+│   ├── matcher.py
+│   └── logger.py
+├── main.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+**`database/db.py`**
+```python
+import sqlite3
+from sqlite3 import Error
+from typing import Optional
+from utils.logger import setup_logger
+
+logger = setup_logger()
+
+DATABASE = 'qa_database.db'
+
+def create_connection() -> Optional[sqlite3.Connection]:
+    """
+    Create a database connection to the SQLite database specified by DATABASE.
+    Returns the connection object or None if an error occurs.
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE)
+        return conn
+    except Error as e:
+        logger.error(f"Database connection error: {e}")
+    return conn
+
+def initialize_db() -> None:
+    """
+    Initialize the database by creating the qa table if it doesn't exist.
+    """
+    conn = create_connection()
+    if conn is not None:
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS qa (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question TEXT NOT NULL,
+            answer TEXT NOT NULL
+        );
+        """
+        try:
+            cur = conn.cursor()
+            cur.execute(create_table_sql)
+            conn.commit()
+            logger.info("Database initialized successfully.")
+        except Error as e:
+            logger.error(f"Error initializing database: {e}")
+        finally:
+            conn.close()
+    else:
+        logger.error("Error! Cannot create the database connection.")
+```
+
+---
+
+**`models/qa_model.py`**
+```python
+from typing import List, Tuple, Optional
+from database.db import create_connection
+from utils.logger import setup_logger
+
+logger = setup_logger()
+
+def get_all_questions() -> List[Tuple[str, str]]:
+    """
+    Retrieve all question-answer pairs from the database.
+    
+    Returns:
+        A list of tuples containing questions and their corresponding answers.
+    """
+    conn = create_connection()
+    if conn is None:
+        logger.error("Failed to create database connection.")
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT question, answer FROM qa")
+        rows = cur.fetchall()
+        return rows
+    except Exception as e:
+        logger.error(f"Error fetching questions: {e}")
+        return []
+    finally:
+        conn.close()
+
+def search_questions(user_question: str) -> List[Tuple[str, str]]:
+    """
+    Search for questions in the database that contain the user_question substring.
+    
+    Args:
+        user_question: The question input by the user.
+    
+    Returns:
+        A list of tuples containing matching questions and their corresponding answers.
+    """
+    conn = create_connection()
+    if conn is None:
+        logger.error("Failed to create database connection.")
+        return []
+    try:
+        cur = conn.cursor()
+        search_pattern = f"%{user_question}%"
+        cur.execute("SELECT question, answer FROM qa WHERE question LIKE ?", (search_pattern,))
+        rows = cur.fetchall()
+        return rows
+    except Exception as e:
+        logger.error(f"Error searching questions: {e}")
+        return []
+    finally:
+        conn.close()
+
+def insert_qa_pair(question: str, answer: str) -> None:
+    """
+    Insert a new question-answer pair into the database.
+    
+    Args:
+        question: The question to insert.
+        answer: The corresponding answer to insert.
+    """
+    conn = create_connection()
+    if conn is None:
+        logger.error("Failed to create database connection.")
+        return
+    try:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO qa (question, answer) VALUES (?, ?)", (question.strip(), answer.strip()))
+        conn.commit()
+        logger.info(f"Inserted new Q&A pair: {question} | {answer}")
+    except Exception as e:
+        logger.error(f"Error inserting Q&A pair: {e}")
+    finally:
+        conn.close()
+```
+
+---
+
+**`utils/matcher.py`**
+```python
+from typing import List, Tuple, Optional
+from rapidfuzz import fuzz
+
+def find_best_match(user_question: str, questions: List[Tuple[str, str]], threshold: int = 60) -> Optional[str]:
+    """
+    Find the best matching answer for the user's question using fuzzy matching.
+
+    Args:
+        user_question: The question input by the user.
+        questions: A list of tuples containing questions and their corresponding answers.
+        threshold: The minimum score required to consider a match valid.
+
+    Returns:
+        The best matching answer if the score is above the threshold; otherwise, None.
+    """
+    best_score = 0
+    best_match = None
+    for q, a in questions:
+        score = fuzz.ratio(user_question.lower(), q.lower())
+        if score > best_score:
+            best_score = score
+            best_match = a
+    if best_score >= threshold:
+        return best_match
+    return None
+```
+
+---
+
+**`utils/logger.py`**
+```python
+import logging
+from typing import Optional
+
+def setup_logger() -> logging.Logger:
+    """
+    Set up the logger for the application.
+
+    Returns:
+        A configured logger instance.
+    """
+    logger = logging.getLogger('QAApp')
+    logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler('app.log')
+    fh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    if not logger.handlers:
+        logger.addHandler(fh)
+    return logger
+```
+
+---
+
+**`main.py`**
+```python
+from typing import Optional
+from database.db import initialize_db
+from models.qa_model import get_all_questions, search_questions, insert_qa_pair
+from utils.matcher import find_best_match
+from utils.logger import setup_logger
+
+def main() -> None:
+    """
+    The main function that runs the QA application.
+    """
+    logger = setup_logger()
+    initialize_db()
+    print("Welcome to the QA App! Type 'exit' to quit.")
+    while True:
+        try:
+            user_question = input("You: ").strip()
+            if user_question.lower() == 'exit':
+                print("Goodbye!")
+                logger.info("User exited the application.")
+                break
+            if not user_question:
+                print("Please enter a valid question.")
+                continue
+            # Attempt to search with LIKE query first
+            questions = search_questions(user_question)
+            # If no results, fetch all questions
+            if not questions:
+                questions = get_all_questions()
+            answer = find_best_match(user_question, questions)
+            if answer:
+                print(f"App: {answer}")
+                logger.info(f"Question: {user_question} | Answer: {answer}")
+            else:
+                print("I don't know the answer to that question.")
+                user_answer = input("Please provide the answer: ").strip()
+                if user_answer:
+                    insert_qa_pair(user_question, user_answer)
+                    print("Thank you! I've learned something new.")
+                    logger.info(f"New Q&A added. Question: {user_question} | Answer: {user_answer}")
+                else:
+                    print("No answer provided. Skipping.")
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            print("An unexpected error occurred. Please try again.")
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+**`requirements.txt`**
+```
+rapidfuzz
+```
+
+---
+
+**`README.md`**
+```markdown
+# QA App
+
+A simple Python application that allows users to ask questions and retrieves answers from a database. If the answer is not found, it prompts the user to provide one, storing the new Q&A pair for future use.
+
+## Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository_url>
+   ```
+2. **Navigate to the app directory:**
+   ```bash
+   cd app
+   ```
+3. **Create a virtual environment (optional but recommended):**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+4. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. **Run the application:**
+   ```bash
+   python main.py
+   ```
+
+## Features
+
+- Stores Q&A pairs in a SQLite database.
+- Uses fuzzy matching (RapidFuzz) to find the best answer.
+- Logs all interactions and errors.
+- Graceful error handling to prevent crashes.
+- Simple command-line interface with input validation.
+
+## Dependencies
+
+- Python 3.x
+- [RapidFuzz](https://github.com/maxbachmann/RapidFuzz) for fuzzy string matching.
+
+## License
+
+MIT License
+```

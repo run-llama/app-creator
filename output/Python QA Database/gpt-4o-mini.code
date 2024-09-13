@@ -1,0 +1,95 @@
+### Directory Structure
+```
+qa_app/
+├── app.py
+├── database.py
+├── requirements.txt
+└── qa.db
+```
+
+### `app.py`
+```python
+import sqlite3
+from difflib import get_close_matches
+
+DATABASE = 'qa.db'
+
+def create_table():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS qa
+                      (question TEXT PRIMARY KEY, answer TEXT)''')
+    conn.commit()
+    conn.close()
+
+def get_answer(question):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.row_factory = sqlite3.Row
+    
+    cursor.execute("SELECT * FROM qa")
+    rows = cursor.fetchall()
+    
+    questions = [row['question'] for row in rows]
+    close_matches = get_close_matches(question, questions, n=1)
+    
+    if close_matches:
+        cursor.execute("SELECT answer FROM qa WHERE question=?", (close_matches[0],))
+        answer = cursor.fetchone()['answer']
+        conn.close()
+        return answer
+    else:
+        conn.close()
+        return None
+
+def add_qa_pair(question, answer):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO qa (question, answer) VALUES (?, ?)", (question, answer))
+    conn.commit()
+    conn.close()
+
+def main():
+    create_table()
+    
+    while True:
+        user_question = input("Please enter your question (or 'exit' to quit): ")
+        if user_question.lower() == 'exit':
+            break
+        
+        answer = get_answer(user_question)
+        
+        if answer:
+            print(f"Answer: {answer}")
+        else:
+            user_answer = input("I don't know the answer. Please provide an answer: ")
+            add_qa_pair(user_question, user_answer)
+            print("Your question and answer have been saved.")
+
+if __name__ == "__main__":
+    main()
+```
+
+### `database.py`
+```python
+import sqlite3
+
+DATABASE = 'qa.db'
+
+def initialize_database():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS qa
+                      (question TEXT PRIMARY KEY, answer TEXT)''')
+    conn.commit()
+    conn.close()
+```
+
+### `requirements.txt`
+```
+sqlite3
+difflib
+```
+
+### `qa.db`
+* (This file will be automatically created and managed by the `sqlite3` library when the app runs.)

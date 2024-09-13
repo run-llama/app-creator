@@ -1,0 +1,77 @@
+```
+app/
+├── main.py
+├── database.py
+└── requirements.txt
+```
+
+**main.py**
+```python
+from database import Database
+from difflib import get_close_matches
+
+def main():
+    db = Database('qa.db')
+    while True:
+        question = input("Ask a question (or type 'exit' to quit): ").strip()
+        if question.lower() == 'exit':
+            break
+        all_questions = db.get_all_questions()
+        matches = get_close_matches(question, all_questions, n=1, cutoff=0.6)
+        if matches:
+            answer = db.get_answer(matches[0])
+            print(f"Answer: {answer}")
+        else:
+            print("I don't know the answer to that question.")
+            new_answer = input("Please provide the answer: ").strip()
+            db.add_question_answer(question, new_answer)
+            print("Thank you, the answer has been recorded.")
+
+    db.close()
+
+if __name__ == '__main__':
+    main()
+```
+
+**database.py**
+```python
+import sqlite3
+
+class Database:
+    def __init__(self, db_name='qa.db'):
+        self.conn = sqlite3.connect(db_name)
+        self.create_table()
+
+    def create_table(self):
+        sql = '''
+        CREATE TABLE IF NOT EXISTS qa (
+            question TEXT PRIMARY KEY,
+            answer TEXT NOT NULL
+        )
+        '''
+        self.conn.execute(sql)
+        self.conn.commit()
+
+    def get_all_questions(self):
+        cursor = self.conn.execute('SELECT question FROM qa')
+        return [row[0] for row in cursor.fetchall()]
+
+    def get_answer(self, question):
+        cursor = self.conn.execute('SELECT answer FROM qa WHERE question = ?', (question,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
+
+    def add_question_answer(self, question, answer):
+        self.conn.execute('INSERT OR REPLACE INTO qa (question, answer) VALUES (?, ?)', (question, answer))
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+```
+
+**requirements.txt**
+```
+```

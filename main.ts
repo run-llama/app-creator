@@ -1,6 +1,6 @@
 import { createAgent, MessageEvent } from "./agent";
-
-const MODELS = ["gpt-4o-mini", "o1-preview"];
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 const apps = [
   {
@@ -9,18 +9,18 @@ const apps = [
 database where they are mapped to answers. If there is a close match, it retrieves 
 the matched answer. If there isn't, it asks the user to provide an answer and 
 stores the question/answer pair in the database.`,
-    models: MODELS
+    models: ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
   },
   {
     name: "JavaScript Todo App",
     spec: `Create a full-stack NextJS todo app with a TailwindCSS frontend, that allows users to add, 
 remove, and mark tasks as complete. Use a Postgres database to persist the tasks.`,
-    models: MODELS
+    models: ["gpt-4o-mini", "gpt-4o", "o1-mini"]  // didn't complete with o1-preview
   }
   // Add more specifications as needed
 ];
 
-async function runGeneration(spec: string, model: string) {
+async function runGeneration(name: string, spec: string, model: string) {
   console.log(`Running generation with model: ${model}`);
   const codeAgent = createAgent(model);
   const run = codeAgent.run(spec);
@@ -29,16 +29,24 @@ async function runGeneration(spec: string, model: string) {
     console.log(`${msg}\n`);
   }
   const result = await run;
-  console.log("Final code:\n", result.data.result);
+  
+  // Create output directory if it doesn't exist
+  const outputDir = path.join('output', name);
+  await fs.mkdir(outputDir, { recursive: true });
+  
+  // Write the generated code to a file
+  const outputFile = path.join(outputDir, `${model}.code`);
+  await fs.writeFile(outputFile, result.data.result);
+  console.log(`Generated code written to: ${outputFile}\n`);
 }
 
 async function main() {
   for (const specItem of apps) {
-    console.log(`\n--- Starting specification: ${specItem.name} ---\n`);
+    console.log(`\n--- Starting generation: ${specItem.name} ---\n`);
     for (const model of specItem.models) {
-      await runGeneration(specItem.spec, model);
+      await runGeneration(specItem.name, specItem.spec, model);
     }
-    console.log(`\n--- Finished specification: ${specItem.name} ---\n`);
+    console.log(`\n--- Finished generation: ${specItem.name} ---\n`);
   }
 }
 

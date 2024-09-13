@@ -1,0 +1,339 @@
+```plaintext
+my-todo-app/
+├── backend/
+│   ├── db/
+│   │   ├── index.js
+│   │   └── migrate.js
+│   ├── models/
+│   │   └── task.js
+│   ├── routes/
+│   │   └── tasks.js
+│   ├── .env
+│   ├── server.js
+│   └── package.json
+└── frontend/
+    ├── pages/
+    │   ├── index.js
+    │   └── api/
+    │       └── tasks.js
+    ├── components/
+    │   ├── TodoForm.js
+    │   └── TodoList.js
+    ├── styles/
+    │   └── globals.css
+    ├── tailwind.config.js
+    ├── postcss.config.js
+    ├── .env.local
+    └── package.json
+```
+
+### Backend Files
+
+#### backend/db/index.js
+```javascript
+const { Client } = require('pg');
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+});
+
+client.connect();
+
+module.exports = client;
+```
+
+#### backend/db/migrate.js
+```javascript
+const client = require('./index');
+
+const createTasksTable = async () => {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      completed BOOLEAN DEFAULT FALSE
+    );
+  `);
+};
+
+const migrate = async () => {
+  await createTasksTable();
+  console.log('Migration complete');
+  client.end();
+};
+
+migrate().catch(err => console.error(err));
+```
+
+#### backend/models/task.js
+```javascript
+const db = require('../db/index');
+
+const getAllTasks = async () => {
+  const res = await db.query('SELECT * FROM tasks');
+  return res.rows;
+};
+
+const addTask = async (title) => {
+  const res = await db.query('INSERT INTO tasks (title) VALUES ($1) RETURNING *', [title]);
+  return res.rows[0];
+};
+
+const removeTask = async (id) => {
+  await db.query('DELETE FROM tasks WHERE id = $1', [id]);
+};
+
+const completeTask = async (id) => {
+  await db.query('UPDATE tasks SET completed = TRUE WHERE id = $1', [id]);
+};
+
+module.exports = { getAllTasks, addTask, removeTask, completeTask };
+```
+
+#### backend/routes/tasks.js
+```javascript
+const express = require('express');
+const router = express.Router();
+const taskModel = require('../models/task');
+
+router.get('/', async (req, res) => {
+  const tasks = await taskModel.getAllTasks();
+  res.json(tasks);
+});
+
+router.post('/', async (req, res) => {
+  const task = await taskModel.addTask(req.body.title);
+  res.status(201).json(task);
+});
+
+router.delete('/:id', async (req, res) => {
+  await taskModel.removeTask(req.params.id);
+  res.status(204).send();
+});
+
+router.patch('/:id/complete', async (req, res) => {
+  await taskModel.completeTask(req.params.id);
+  res.status(204).send();
+});
+
+module.exports = router;
+```
+
+#### backend/.env
+```
+DATABASE_URL=postgres://user:password@localhost:5432/todo
+```
+
+#### backend/server.js
+```javascript
+const express = require('express');
+const taskRoutes = require('./routes/tasks');
+const cors = require('cors');
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors());
+app.use(express.json());
+app.use('/tasks', taskRoutes);
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+#### backend/package.json
+```json
+{
+  "name": "todo-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "migrate": "node db/migrate.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "pg": "^8.7.1"
+  }
+}
+```
+
+### Frontend Files
+
+#### frontend/pages/index.js
+```javascript
+import { useEffect, useState } from 'react';
+import TodoForm from '../components/TodoForm';
+import TodoList from '../components/TodoList';
+
+export default function Home() {
+  const [tasks, setTasks] = useState([]);
+
+  const fetchTasks = async () => {
+    const res = await fetch('/api/tasks');
+    const data = await res.json();
+    setTasks(data);
+  };
+
+  const addTask = async (title) => {
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title }),
+    });
+    const newTask = await res.json();
+    setTasks((prev) => [...prev, newTask]);
+  };
+
+  const removeTask = async (id) => {
+    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    setTasks((prev) => prev.filter(task => task.id !== id));
+  };
+
+  const completeTask = async (id) => {
+    await fetch(`/api/tasks/${id}/complete`, { method: 'PATCH' });
+    setTasks((prev) => prev.map(task => task.id === id ? { ...task, completed: true } : task));
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-4xl mb-4">Todo App</h1>
+      <TodoForm addTask={addTask} />
+      <TodoList tasks={tasks} removeTask={removeTask} completeTask={completeTask} />
+    </div>
+  );
+}
+```
+
+#### frontend/pages/api/tasks.js
+```javascript
+import taskModel from '../../../backend/models/task';
+
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    const tasks = await taskModel.getAllTasks();
+    res.status(200).json(tasks);
+  } else if (req.method === 'POST') {
+    const task = await taskModel.addTask(req.body.title);
+    res.status(201).json(task);
+  }
+}
+```
+
+#### frontend/components/TodoForm.js
+```javascript
+import { useState } from 'react';
+
+const TodoForm = ({ addTask }) => {
+  const [title, setTitle] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title) return;
+    addTask(title);
+    setTitle('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-4">
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="border border-gray-300 rounded p-2"
+        placeholder="New task"
+      />
+      <button type="submit" className="bg-blue-500 text-white rounded p-2 ml-2">Add</button>
+    </form>
+  );
+};
+
+export default TodoForm;
+```
+
+#### frontend/components/TodoList.js
+```javascript
+const TodoList = ({ tasks, removeTask, completeTask }) => {
+  return (
+    <ul>
+      {tasks.map(task => (
+        <li key={task.id} className={`flex justify-between items-center p-2 ${task.completed ? 'line-through' : ''}`}>
+          <span>{task.title}</span>
+          <div>
+            {!task.completed && <button onClick={() => completeTask(task.id)} className="bg-green-500 text-white rounded p-1">Complete</button>}
+            <button onClick={() => removeTask(task.id)} className="bg-red-500 text-white rounded p-1 ml-2">Remove</button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default TodoList;
+```
+
+#### frontend/styles/globals.css
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+#### frontend/tailwind.config.js
+```javascript
+module.exports = {
+  purge: ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
+  darkMode: false, // or 'media' or 'class'
+  theme: {
+    extend: {},
+  },
+  variants: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+#### frontend/postcss.config.js
+```javascript
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+
+#### frontend/.env.local
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+#### frontend/package.json
+```json
+{
+  "name": "todo-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwindcss": "^2.2.19",
+    "postcss": "^8.2.15",
+    "autoprefixer": "^10.3.7"
+  }
+}
+```

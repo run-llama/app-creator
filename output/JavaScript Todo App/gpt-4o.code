@@ -1,0 +1,282 @@
+**Directory Structure:**
+```
+my-todo-app/
+  ├── components/
+  │   ├── Task.js
+  ├── lib/
+  │   ├── db.js
+  ├── pages/
+  │   ├── api/
+  │   │   ├── tasks.js
+  │   ├── _app.js
+  │   ├── index.js
+  ├── prisma/
+  │   ├── schema.prisma
+  ├── styles/
+  │   ├── globals.css
+  ├── .env
+  ├── next.config.js
+  ├── package.json
+  ├── postcss.config.js
+  ├── tailwind.config.js
+```
+
+**components/Task.js**
+```jsx
+import React from 'react';
+
+const Task = ({ task, removeTask, toggleTask }) => {
+  return (
+    <div className="flex items-center justify-between bg-white p-4 shadow-sm border-b border-gray-200">
+      <div>
+        <input 
+          type="checkbox" 
+          checked={task.completed} 
+          onChange={() => toggleTask(task.id)} 
+        />
+        <span className={`ml-2 ${task.completed ? 'line-through' : ''}`}>
+          {task.title}
+        </span>
+      </div>
+      <button 
+        onClick={() => removeTask(task.id)} 
+        className="bg-red-500 text-white px-2 py-1 rounded"
+      >
+        Remove
+      </button>
+    </div>
+  );
+};
+
+export default Task;
+```
+
+**lib/db.js**
+```js
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export default prisma;
+```
+
+**pages/api/tasks.js**
+```js
+import prisma from '../../lib/db';
+
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    const tasks = await prisma.task.findMany();
+    res.status(200).json(tasks);
+  } else if (req.method === 'POST') {
+    const { title } = req.body;
+    const task = await prisma.task.create({
+      data: { title, completed: false },
+    });
+    res.status(201).json(task);
+  } else if (req.method === 'DELETE') {
+    const { id } = req.body;
+    await prisma.task.delete({
+      where: { id: parseInt(id) },
+    });
+    res.status(204).end();
+  } else if (req.method === 'PUT') {
+    const { id, completed } = req.body;
+    const task = await prisma.task.update({
+      where: { id: parseInt(id) },
+      data: { completed },
+    });
+    res.status(200).json(task);
+  } else {
+    res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+}
+```
+
+**pages/_app.js**
+```jsx
+import '../styles/globals.css';
+
+function MyApp({ Component, pageProps }) {
+  return <Component {...pageProps} />;
+}
+
+export default MyApp;
+```
+
+**pages/index.js**
+```jsx
+import React, { useState, useEffect } from 'react';
+import Task from '../components/Task';
+
+export default function Home() {
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState('');
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const res = await fetch('/api/tasks');
+      const data = await res.json();
+      setTasks(data);
+    };
+    fetchTasks();
+  }, []);
+
+  const addTask = async () => {
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTask }),
+    });
+    const task = await res.json();
+    setTasks([...tasks, task]);
+    setNewTask('');
+  };
+
+  const removeTask = async (id) => {
+    await fetch('/api/tasks', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    setTasks(tasks.filter((task) => task.id !== id));
+  };
+
+  const toggleTask = async (id) => {
+    const task = tasks.find((task) => task.id === id);
+    const res = await fetch('/api/tasks', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, completed: !task.completed }),
+    });
+    const updatedTask = await res.json();
+    setTasks(tasks.map((t) => (t.id === id ? updatedTask : t)));
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="bg-white p-6 rounded shadow-md w-full max-w-lg">
+        <h1 className="text-2xl font-bold mb-4">Todo List</h1>
+        <div className="flex mb-4">
+          <input
+            type="text"
+            className="border p-2 rounded mr-2 flex-grow"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+          />
+          <button
+            onClick={addTask}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Add
+          </button>
+        </div>
+        <div>
+          {tasks.map((task) => (
+            <Task
+              key={task.id}
+              task={task}
+              removeTask={removeTask}
+              toggleTask={toggleTask}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**prisma/schema.prisma**
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Task {
+  id        Int      @id @default(autoincrement())
+  title     String
+  completed Boolean  @default(false)
+}
+```
+
+**styles/globals.css**
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+**.env**
+```
+DATABASE_URL=postgresql://user:password@localhost:5432/mydatabase
+```
+
+**next.config.js**
+```js
+module.exports = {
+  reactStrictMode: true,
+};
+```
+
+**package.json**
+```json
+{
+  "name": "my-todo-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma": "prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^3.12.0",
+    "next": "12.0.7",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "eslint": "7.32.0",
+    "eslint-config-next": "12.0.7",
+    "postcss": "^8.4.5",
+    "prisma": "^3.12.0",
+    "tailwindcss": "^2.2.19"
+  }
+}
+```
+
+**postcss.config.js**
+```js
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+```
+
+**tailwind.config.js**
+```js
+module.exports = {
+  purge: ['./pages/**/*.js', './components/**/*.js'],
+  darkMode: false,
+  theme: {
+    extend: {},
+  },
+  variants: {
+    extend: {},
+  },
+  plugins: [],
+};
+```
+
+Make sure to perform a `npx prisma generate` and `npx prisma migrate dev --name init` to generate the Prisma Client and migrate your database schema. Additionally, run `npm install` to install all dependencies before starting the development server with `npm run dev`.

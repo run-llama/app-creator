@@ -1,0 +1,393 @@
+```
+my-todo-app/
+├── components/
+│   └── TaskItem.js
+├── pages/
+│   ├── api/
+│   │   └── tasks/
+│   │       ├── index.js
+│   │       └── [id].js
+│   └── index.js
+├── prisma/
+│   └── schema.prisma
+├── public/
+│   └── favicon.ico
+├── styles/
+│   └── globals.css
+├── tailwind.config.js
+├── postcss.config.js
+├── package.json
+├── next.config.js
+└── .env.local
+```
+
+---
+
+### File: `package.json`
+
+```json
+{
+  "name": "my-todo-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "prisma": "prisma"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwindcss": "^3.3.2",
+    "postcss": "^8.4.21",
+    "autoprefixer": "^10.4.14",
+    "prisma": "^4.13.0",
+    "@prisma/client": "^4.13.0"
+  }
+}
+```
+
+---
+
+### File: `next.config.js`
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+}
+
+module.exports = nextConfig
+```
+
+---
+
+### File: `.env.local`
+
+```
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME
+```
+
+*Replace `USER`, `PASSWORD`, `HOST`, `PORT`, and `DATABASE_NAME` with your PostgreSQL credentials.*
+
+---
+
+### File: `prisma/schema.prisma`
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id        Int      @id @default(autoincrement())
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+```
+
+---
+
+### File: `tailwind.config.js`
+
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+---
+
+### File: `postcss.config.js`
+
+```javascript
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+
+---
+
+### File: `styles/globals.css`
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+  @apply bg-gray-100;
+}
+```
+
+---
+
+### File: `public/favicon.ico`
+
+*Include your favicon.ico file here.*
+
+---
+
+### File: `prisma/seed.js`
+
+```javascript
+const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
+
+async function main() {
+  await prisma.task.createMany({
+    data: [
+      { title: 'Learn Next.js' },
+      { title: 'Build a Todo App' },
+      { title: 'Deploy to Vercel' },
+    ],
+  })
+}
+
+main()
+  .catch(e => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })
+```
+
+*Optional: Seed script to populate initial data.*
+
+---
+
+### File: `pages/_app.js`
+
+```javascript
+import '../styles/globals.css'
+
+function MyApp({ Component, pageProps }) {
+  return <Component {...pageProps} />
+}
+
+export default MyApp
+```
+
+---
+
+### File: `pages/index.js`
+
+```javascript
+import { useState, useEffect } from 'react'
+import TaskItem from '../components/TaskItem'
+
+export default function Home() {
+  const [tasks, setTasks] = useState([])
+  const [title, setTitle] = useState('')
+
+  useEffect(() => {
+    fetchTasks()
+  }, [])
+
+  const fetchTasks = async () => {
+    const res = await fetch('/api/tasks')
+    const data = await res.json()
+    setTasks(data)
+  }
+
+  const addTask = async () => {
+    if (!title) return
+    await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+    setTitle('')
+    fetchTasks()
+  }
+
+  const deleteTask = async (id) => {
+    await fetch(`/api/tasks/${id}`, {
+      method: 'DELETE',
+    })
+    fetchTasks()
+  }
+
+  const toggleComplete = async (id, completed) => {
+    await fetch(`/api/tasks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: !completed }),
+    })
+    fetchTasks()
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4">Todo App</h1>
+        <div className="flex mb-4">
+          <input
+            type="text"
+            className="flex-grow border rounded px-2 py-1"
+            placeholder="Add a new task"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <button
+            className="ml-2 px-4 py-1 bg-blue-500 text-white rounded"
+            onClick={addTask}
+          >
+            Add
+          </button>
+        </div>
+        <ul>
+          {tasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onDelete={() => deleteTask(task.id)}
+              onToggle={() => toggleComplete(task.id, task.completed)}
+            />
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+```
+
+---
+
+### File: `components/TaskItem.js`
+
+```javascript
+export default function TaskItem({ task, onDelete, onToggle }) {
+  return (
+    <li className="flex items-center justify-between mb-2">
+      <span
+        className={`flex-grow cursor-pointer ${
+          task.completed ? 'line-through text-gray-500' : ''
+        }`}
+        onClick={onToggle}
+      >
+        {task.title}
+      </span>
+      <button
+        className="ml-4 text-red-500 hover:text-red-700"
+        onClick={onDelete}
+      >
+        Delete
+      </button>
+    </li>
+  )
+}
+```
+
+---
+
+### File: `pages/api/tasks/index.js`
+
+```javascript
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    const tasks = await prisma.task.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+    res.status(200).json(tasks)
+  } else if (req.method === 'POST') {
+    const { title } = req.body
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' })
+    }
+    const task = await prisma.task.create({
+      data: { title },
+    })
+    res.status(201).json(task)
+  } else {
+    res.setHeader('Allow', ['GET', 'POST'])
+    res.status(405).end(`Method ${req.method} Not Allowed`)
+  }
+}
+```
+
+---
+
+### File: `pages/api/tasks/[id].js`
+
+```javascript
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
+export default async function handler(req, res) {
+  const { id } = req.query
+  const taskId = parseInt(id)
+
+  if (isNaN(taskId)) {
+    return res.status(400).json({ error: 'Invalid task ID' })
+  }
+
+  if (req.method === 'PUT') {
+    const { completed } = req.body
+    const updatedTask = await prisma.task.update({
+      where: { id: taskId },
+      data: { completed },
+    })
+    res.status(200).json(updatedTask)
+  } else if (req.method === 'DELETE') {
+    await prisma.task.delete({
+      where: { id: taskId },
+    })
+    res.status(204).end()
+  } else {
+    res.setHeader('Allow', ['PUT', 'DELETE'])
+    res.status(405).end(`Method ${req.method} Not Allowed`)
+  }
+}
+```
+
+---
+
+### Additional Steps:
+
+1. **Initialize Prisma:**
+   - Run `npx prisma init` to initialize Prisma in your project.
+   - Ensure the `DATABASE_URL` in `.env.local` is correctly set.
+
+2. **Migrate Database:**
+   - Run `npx prisma migrate dev --name init` to create the database schema.
+
+3. **Install Dependencies:**
+   - Run `npm install` to install all necessary packages.
+
+4. **Run the Development Server:**
+   - Run `npm run dev` to start the development server.
+
+5. **Build Tailwind CSS:**
+   - Ensure Tailwind CSS is properly set up by following the official Next.js with Tailwind CSS guide if needed.
+
+This setup will provide a fully functional Todo application with the ability to add, delete, and toggle the completion status of tasks, all persisted in a PostgreSQL database.
