@@ -8,7 +8,9 @@ stores the question/answer pair in the database.`;
 
 // Usage
 async function main() {
-  const codeAgent = createAgent();
+//   const model = "o1-preview"; 
+  const model = "gpt-4o-mini";
+  const codeAgent = createAgent(model);
   const run = codeAgent.run(specification);
   for await (const event of codeAgent.streamEvents()) {
     const msg = (event as MessageEvent).data.msg;

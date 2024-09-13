@@ -5,12 +5,9 @@ import {
   Workflow,
   WorkflowEvent,
 } from "@llamaindex/core/workflow";
-import { OpenAI } from "llamaindex";
+import { OpenAI, Settings } from "llamaindex";
 
 const MAX_REVIEWS = 3;
-
-// Using the o1-preview model (see https://platform.openai.com/docs/guides/reasoning?reasoning-prompt-examples=coding-planning)
-const llm = new OpenAI({ model: "o1-preview", temperature: 1 });
 
 // Create custom event types
 export class MessageEvent extends WorkflowEvent<{ msg: string }> {}
@@ -39,7 +36,7 @@ const architect = async (context: Context, ev: StartEvent) => {
     }),
   );
   const prompt = `Build an app for this specification: <spec>${spec}</spec>. Make a plan for the directory structure you'll need, then return each file in full. Don't supply any reasoning, just code.`;
-  const code = await llm.complete({ prompt });
+  const code = await Settings.llm.complete({ prompt });
   return new CodeEvent({ code: code.text });
 };
 
@@ -56,7 +53,7 @@ const coder = async (context: Context, ev: ReviewEvent) => {
     }),
   );
   const prompt = `We need to improve code that should implement this specification: <spec>${spec}</spec>. Here is the current code: <code>${code}</code>. And here is a review of the code: <review>${review}</review>. Improve the code based on the review, keep the specification in mind, and return the full updated code. Don't supply any reasoning, just code.`;
-  const updatedCode = await llm.complete({ prompt });
+  const updatedCode = await Settings.llm.complete({ prompt });
   return new CodeEvent({ code: updatedCode.text });
 };
 
@@ -83,7 +80,7 @@ const reviewer = async (context: Context, ev: CodeEvent) => {
     new MessageEvent({ msg: `Review #${numberReviews}: ${truncate(code)}` }),
   );
   const prompt = `Review this code: <code>${code}</code>. Check if the code quality and whether it correctly implements this specification: <spec>${spec}</spec>. If you're satisfied, just return 'Looks great', nothing else. If not, return a review with a list of changes you'd like to see.`;
-  const review = (await llm.complete({ prompt })).text;
+  const review = (await Settings.llm.complete({ prompt })).text;
   if (review.includes("Looks great")) {
     // the reviewer is satisfied with the code, let's return the review
     context.writeEventToStream(
@@ -97,10 +94,15 @@ const reviewer = async (context: Context, ev: CodeEvent) => {
   return new ReviewEvent({ review, code });
 };
 
-export function createAgent(): Workflow {
-  const codeAgent = new Workflow({ validate: true });
+export function createAgent(model: string): Workflow {
+  const codeAgent = new Workflow({ validate: true, verbose: true });
   codeAgent.addStep(StartEvent, architect, { outputs: CodeEvent });
   codeAgent.addStep(ReviewEvent, coder, { outputs: CodeEvent });
   codeAgent.addStep(CodeEvent, reviewer, { outputs: ReviewEvent });
+
+  // Update the llm model with the provided model
+  console.log("Using OpenAI model:", model);
+  Settings.llm = new OpenAI({ model, temperature: 1 });
+
   return codeAgent;
 }
