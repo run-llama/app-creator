@@ -95,7 +95,7 @@ const reviewer = async (context: Context, ev: CodeEvent) => {
 };
 
 export function createAgent(model: string): Workflow {
-  const codeAgent = new Workflow({ validate: true, verbose: true });
+  const codeAgent = new Workflow({ validate: true });
   codeAgent.addStep(StartEvent, architect, { outputs: CodeEvent });
   codeAgent.addStep(ReviewEvent, coder, { outputs: CodeEvent });
   codeAgent.addStep(CodeEvent, reviewer, { outputs: ReviewEvent });
