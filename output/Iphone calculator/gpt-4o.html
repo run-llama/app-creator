@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iPhone Style Scientific Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .btn {
+      background-color: #333;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.875rem;
+    }
+    .btn:active {
+      background-color: #4a4a4a;
+    }
+    .btn:focus {
+      box-shadow: 0 0 0 2px rgba(72, 72, 72, 1);
+      outline: none;
+    }
+    #result {
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+  <div class="bg-black rounded-lg p-4">
+    <div class="text-right mb-2">
+      <div id="result" class="text-3xl" role="textbox" aria-readonly="true">0</div>
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+      <button class="btn" onclick="clearDisplay()">AC</button>
+      <button class="btn" onclick="toggleSign()">±</button>
+      <button class="btn" onclick="inputChar('%')">%</button>
+      <button class="btn text-orange-500" onclick="inputChar('/')">÷</button>
+      <button class="btn" onclick="inputChar('7')">7</button>
+      <button class="btn" onclick="inputChar('8')">8</button>
+      <button class="btn" onclick="inputChar('9')">9</button>
+      <button class="btn text-orange-500" onclick="inputChar('*')">×</button>
+      <button class="btn" onclick="inputChar('4')">4</button>
+      <button class="btn" onclick="inputChar('5')">5</button>
+      <button class="btn" onclick="inputChar('6')">6</button>
+      <button class="btn text-orange-500" onclick="inputChar('-')">−</button>
+      <button class="btn" onclick="inputChar('1')">1</button>
+      <button class="btn" onclick="inputChar('2')">2</button>
+      <button class="btn" onclick="inputChar('3')">3</button>
+      <button class="btn text-orange-500" onclick="inputChar('+')">+</button>
+      <button class="btn col-span-2" onclick="inputChar('0')">0</button>
+      <button class="btn" onclick="inputChar('.')">.</button>
+      <button class="btn text-orange-500" onclick="calculateResult()">=</button>
+    </div>
+  </div>
+
+  <script>
+    let display = document.getElementById('result');
+    let currentInput = '';
+    let shouldOverwrite = false;
+
+    function clearDisplay() {
+      currentInput = '';
+      display.textContent = '0';
+      shouldOverwrite = false;
+    }
+    
+    function toggleSign() {
+      if (currentInput) {
+        currentInput = (parseFloat(currentInput) * -1).toString();
+        display.textContent = currentInput;
+      }
+    }
+
+    function inputChar(char) {
+      if (shouldOverwrite && !isNaN(char)) {
+        currentInput = '';
+        shouldOverwrite = false;
+      }
+      if (display.textContent === 'Error') {
+        currentInput = '';
+      }
+      if (/[+\-*/%]/.test(char)) {
+        if (/[+\-*/%]$/.test(currentInput)) {
+          currentInput = currentInput.slice(0, -1);
+        }
+        if (!currentInput) return;
+      }
+      currentInput += char;
+      display.textContent = currentInput;
+    }
+
+    function calculateResult() {
+      try {
+        if (currentInput.includes('/0')) throw new Error('Division by zero');
+        if (!currentInput || /[+\-*/%]$/.test(currentInput)) {
+          display.textContent = 'Error';
+          return;
+        }
+        currentInput = Function('"use strict";return (' + currentInput + ')')().toString();
+        display.textContent = currentInput;
+        shouldOverwrite = true;
+      } catch {
+        display.textContent = 'Error';
+        currentInput = '';
+        shouldOverwrite = false;
+      }
+    }
+  </script>
+</body>
+</html>

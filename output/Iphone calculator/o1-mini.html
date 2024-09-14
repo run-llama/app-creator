@@ -1,0 +1,262 @@
+```
+index.html
+```
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone Style Scientific Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1c1c1e;
+        }
+
+        .calculator {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #2c2c2e;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .display {
+            background-color: #3a3a3c;
+            color: #fff;
+            font-size: 2rem;
+            text-align: right;
+            padding: 20px;
+            border-radius: 10px;
+            word-wrap: break-word;
+            min-height: 60px;
+        }
+
+        .button {
+            width: 20%;
+            padding: 20px;
+            margin: 5px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            background-color: #4a4a4c;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #6a6a6c;
+        }
+
+        .button.operator {
+            background-color: #ff9500;
+        }
+
+        .button.operator:hover {
+            background-color: #ffa733;
+        }
+
+        .button.function {
+            background-color: #a6a6a8;
+            color: #000;
+        }
+
+        .button.function:hover {
+            background-color: #bcbcbc;
+        }
+
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen">
+    <div class="calculator">
+        <div id="display" class="display">0</div>
+        <div class="grid mt-4">
+            <button class="button function" data-action="clear">C</button>
+            <button class="button function" data-action="backspace">⌫</button>
+            <button class="button function" data-action="sqrt">√</button>
+            <button class="button operator" data-action="/">÷</button>
+
+            <button class="button" data-action="7">7</button>
+            <button class="button" data-action="8">8</button>
+            <button class="button" data-action="9">9</button>
+            <button class="button operator" data-action="*">×</button>
+
+            <button class="button" data-action="4">4</button>
+            <button class="button" data-action="5">5</button>
+            <button class="button" data-action="6">6</button>
+            <button class="button operator" data-action="-">−</button>
+
+            <button class="button" data-action="1">1</button>
+            <button class="button" data-action="2">2</button>
+            <button class="button" data-action="3">3</button>
+            <button class="button operator" data-action="+">+</button>
+
+            <button class="button" data-action="0">0</button>
+            <button class="button" data-action=".">.</button>
+            <button class="button operator" data-action="=">=</button>
+
+            <button class="button function" data-action="sin">sin</button>
+            <button class="button function" data-action="cos">cos</button>
+            <button class="button function" data-action="tan">tan</button>
+            <button class="button function" data-action="log">log</button>
+            <button class="button function" data-action="ln">ln</button>
+            <button class="button function" data-action="exp">exp</button>
+            <button class="button function" data-action="pow">xˣ</button>
+            <button class="button function" data-action="pi">π</button>
+            <button class="button function" data-action="e">e</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        let currentInput = '';
+        let resultShown = false;
+
+        const actions = {
+            'clear': () => {
+                currentInput = '';
+                display.innerText = '0';
+            },
+            'backspace': () => {
+                currentInput = currentInput.slice(0, -1);
+                display.innerText = currentInput || '0';
+            },
+            'sqrt': () => {
+                try {
+                    const value = Math.sqrt(evalExpression(currentInput));
+                    currentInput = value.toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'sin': () => {
+                try {
+                    const value = Math.sin(degreesToRadians(evalExpression(currentInput)));
+                    currentInput = value.toFixed(10).toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'cos': () => {
+                try {
+                    const value = Math.cos(degreesToRadians(evalExpression(currentInput)));
+                    currentInput = value.toFixed(10).toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'tan': () => {
+                try {
+                    const value = Math.tan(degreesToRadians(evalExpression(currentInput)));
+                    currentInput = value.toFixed(10).toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'log': () => {
+                try {
+                    const value = Math.log10(evalExpression(currentInput));
+                    currentInput = value.toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'ln': () => {
+                try {
+                    const value = Math.log(evalExpression(currentInput));
+                    currentInput = value.toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'exp': () => {
+                try {
+                    const value = Math.exp(evalExpression(currentInput));
+                    currentInput = value.toString();
+                    display.innerText = currentInput;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            },
+            'pow': () => {
+                currentInput += '**';
+                display.innerText = currentInput;
+            },
+            'pi': () => {
+                currentInput += Math.PI.toFixed(10);
+                display.innerText = currentInput;
+            },
+            'e': () => {
+                currentInput += Math.E.toFixed(10);
+                display.innerText = currentInput;
+            },
+            '=': () => {
+                try {
+                    const value = evalExpression(currentInput);
+                    display.innerText = value;
+                    currentInput = value.toString();
+                    resultShown = true;
+                } catch {
+                    display.innerText = 'Error';
+                    currentInput = '';
+                }
+            }
+        };
+
+        function degreesToRadians(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        function evalExpression(expr) {
+            // Replace custom operators
+            let sanitized = expr
+                .replace(/÷/g, '/')
+                .replace(/×/g, '*')
+                .replace(/−/g, '-')
+                .replace(/π/g, Math.PI)
+                .replace(/e/g, Math.E);
+            return Function('"use strict";return (' + sanitized + ')')();
+        }
+
+        document.querySelectorAll('.button').forEach(button => {
+            button.addEventListener('click', () => {
+                const action = button.dataset.action;
+                if (actions[action]) {
+                    actions[action]();
+                } else {
+                    if (resultShown) {
+                        currentInput = '';
+                        resultShown = false;
+                    }
+                    currentInput += action;
+                    display.innerText = currentInput;
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
+```

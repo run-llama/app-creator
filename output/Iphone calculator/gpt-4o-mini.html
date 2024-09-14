@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .btn {
+            @apply bg-blue-500 text-white rounded-lg p-2 transition hover:bg-blue-600;
+            @apply focus:outline-none focus:ring focus:ring-blue-300;
+        }
+
+        #display {
+            @apply border border-gray-300;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
+    <div class="max-w-xs w-full bg-white rounded-lg shadow-lg p-4">
+        <input type="text" id="display" class="w-full text-right text-3xl bg-gray-200 rounded-lg p-2 mb-4" disabled>
+        <div class="grid grid-cols-4 gap-2">
+            <button class="btn" onclick="resetDisplay()">C</button>
+            <button class="btn" onclick="appendToDisplay('7')">7</button>
+            <button class="btn" onclick="appendToDisplay('8')">8</button>
+            <button class="btn" onclick="appendToDisplay('9')">9</button>
+            <button class="btn" onclick="appendToDisplay('/')">/</button>
+
+            <button class="btn" onclick="appendToDisplay('4')">4</button>
+            <button class="btn" onclick="appendToDisplay('5')">5</button>
+            <button class="btn" onclick="appendToDisplay('6')">6</button>
+            <button class="btn" onclick="appendToDisplay('*')">*</button>
+
+            <button class="btn" onclick="appendToDisplay('1')">1</button>
+            <button class="btn" onclick="appendToDisplay('2')">2</button>
+            <button class="btn" onclick="appendToDisplay('3')">3</button>
+            <button class="btn" onclick="appendToDisplay('-')">-</button>
+
+            <button class="btn col-span-2" onclick="appendToDisplay('0')">0</button>
+            <button class="btn" onclick="appendToDisplay('.')">.</button>
+            <button class="btn" onclick="calculateResult()">=</button>
+            <button class="btn" onclick="appendToDisplay('+')">+</button>
+
+            <button class="btn col-span-4" onclick="appendToDisplay('Math.sqrt(')">√</button>
+            <button class="btn col-span-4" onclick="appendToDisplay('Math.pow(')">x²</button>
+        </div>
+    </div>
+
+    <script>
+        function appendToDisplay(value) {
+            const display = document.getElementById('display');
+            display.value += value;
+        }
+
+        function calculateResult() {
+            const display = document.getElementById('display');
+            try {
+                const sanitizedInput = display.value
+                    .replace(/Math\.sqrt\(([^)]+)\)/g, 'Math.sqrt($1)')
+                    .replace(/Math\.pow\(([^,]+),\s*([^)]+)\)/g, 'Math.pow($1, $2)');
+                display.value = Function(`'use strict'; return (${sanitizedInput})`)();
+            } catch (error) {
+                display.value = 'Error: Invalid Input';
+            }
+        }
+
+        function resetDisplay() {
+            const display = document.getElementById('display');
+            display.value = '';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>iPhone Style Scientific Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom styles -->
+    <style>
+        /* Custom calculator styles */
+        .calculator {
+            max-width: 400px;
+            margin: auto;
+        }
+
+        .button {
+            height: 80px;
+            font-size: 1.5rem;
+        }
+
+        .button:active {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body class="bg-black flex items-center justify-center min-h-screen">
+    <div class="calculator text-white">
+        <div id="display" class="bg-black text-right text-5xl p-4 overflow-hidden">0</div>
+        <div class="grid grid-cols-5 gap-px">
+            <!-- Scientific Functions Row -->
+            <button id="toggle-2nd" class="button bg-gray-700" onclick="calculator.toggleSecond()"
+                title="Toggle Second Functions">2nd</button>
+            <button id="func1" class="button bg-gray-700" onclick="calculator.scientificFunction('func1')"
+                title="Sine Function">sin</button>
+            <button id="func2" class="button bg-gray-700" onclick="calculator.scientificFunction('func2')"
+                title="Cosine Function">cos</button>
+            <button id="func3" class="button bg-gray-700" onclick="calculator.scientificFunction('func3')"
+                title="Tangent Function">tan</button>
+            <button id="func4" class="button bg-gray-700" onclick="calculator.scientificFunction('func4')"
+                title="Natural Logarithm">ln</button>
+            <!-- Second Functions Row -->
+            <button id="func5" class="button bg-gray-700" onclick="calculator.scientificFunction('π')"
+                title="Pi Constant">π</button>
+            <button id="func6" class="button bg-gray-700" onclick="calculator.scientificFunction('e')"
+                title="Euler's Number">e</button>
+            <button id="func7" class="button bg-gray-700" onclick="calculator.scientificFunction('func7')"
+                title="Square Root">√</button>
+            <button id="func8" class="button bg-gray-700" onclick="calculator.scientificFunction('func8')"
+                title="Exponentiation">xʸ</button>
+            <button id="func9" class="button bg-gray-700" onclick="calculator.scientificFunction('func9')"
+                title="Logarithm Base 10">log</button>
+            <!-- Angle Unit Toggle -->
+            <button id="angle-toggle" class="button bg-gray-700" onclick="calculator.toggleAngleUnit()"
+                title="Toggle Angle Unit">Deg</button>
+            <!-- Standard Functions -->
+            <button id="clear-button" class="button bg-gray-600" onclick="calculator.clearDisplay()"
+                title="Clear Display">AC</button>
+            <button class="button bg-gray-600" onclick="calculator.toggleSign()" title="Toggle Sign">±</button>
+            <button class="button bg-gray-600" onclick="calculator.percent()" title="Percentage">%</button>
+            <button class="button bg-orange-500" onclick="calculator.operator('/')" title="Divide">÷</button>
+            <!-- Number Buttons -->
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('7')" title="7">7</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('8')" title="8">8</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('9')" title="9">9</button>
+            <button class="button bg-orange-500" onclick="calculator.operator('*')" title="Multiply">×</button>
+            <button class="button bg-gray-700" onclick="calculator.memoryFunction('mc')"
+                title="Memory Clear">MC</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('4')" title="4">4</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('5')" title="5">5</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('6')" title="6">6</button>
+            <button class="button bg-orange-500" onclick="calculator.operator('-')" title="Subtract">−</button>
+            <button class="button bg-gray-700" onclick="calculator.memoryFunction('mr')"
+                title="Memory Recall">MR</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('1')" title="1">1</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('2')" title="2">2</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('3')" title="3">3</button>
+            <button class="button bg-orange-500" onclick="calculator.operator('+')" title="Add">+</button>
+            <button class="button bg-gray-700" onclick="calculator.memoryFunction('m-')"
+                title="Memory Subtract">M-</button>
+            <button class="button col-span-2 bg-gray-700" onclick="calculator.appendNumber('0')" title="0">0</button>
+            <button class="button bg-gray-700" onclick="calculator.appendNumber('.')" title="Decimal Point">.</button>
+            <button class="button bg-orange-500" onclick="calculator.calculate()" title="Equals">=</button>
+            <button class="button bg-gray-700" onclick="calculator.memoryFunction('m+')" title="Memory Add">M+</button>
+        </div>
+    </div>
+
+    <script>
+        const calculator = (() => {
+            let currentInput = '';
+            let previousInput = '';
+            let operation = '';
+            let angleUnit = 'Deg';
+            let secondFunction = false;
+            let memory = 0;
+
+            function appendNumber(number) {
+                if (currentInput.length >= 15) return;
+                if (number === '.' && currentInput.includes('.')) return;
+                if (currentInput === '0' && number !== '.') {
+                    currentInput = number;
+                } else {
+                    currentInput += number;
+                }
+                updateDisplay();
+                updateClearButton();
+            }
+
+            function clearDisplay() {
+                if (currentInput !== '') {
+                    currentInput = '';
+                } else {
+                    currentInput = '';
+                    previousInput = '';
+                    operation = '';
+                }
+                updateDisplay();
+                updateClearButton();
+            }
+
+            function updateDisplay() {
+                let displayValue = currentInput || previousInput || '0';
+                if (displayValue.length > 15) {
+                    displayValue = parseFloat(displayValue).toExponential(9);
+                } else {
+                    if (!isNaN(displayValue)) {
+                        displayValue = parseFloat(displayValue).toLocaleString('en-US', { maximumFractionDigits: 9 });
+                    }
+                }
+                if (displayValue === 'Infinity' || displayValue === '-Infinity' || isNaN(displayValue)) {
+                    displayValue = 'Error';
+                }
+                document.getElementById('display').innerText = displayValue;
+            }
+
+            function operator(op) {
+                if (currentInput === '') return;
+                if (previousInput !== '') {
+                    calculate();
+                }
+                operation = op;
+                previousInput = currentInput;
+                currentInput = '';
+                updateClearButton();
+            }
+
+            function calculate() {
+                let computation;
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+                if (isNaN(prev) || isNaN(current)) return;
+                switch (operation) {
+                    case '+':
+                        computation = prev + current;
+                        break;
+                    case '-':
+                        computation = prev - current;
+                        break;
+                    case '*':
+                        computation = prev * current;
+                        break;
+                    case '/':
+                        if (current === 0) {
+                            computation = 'Error';
+                            break;
+                        }
+                        computation = prev / current;
+                        break;
+                    case '^':
+                        computation = Math.pow(prev, current);
+                        break;
+                    case 'root':
+                        if (prev <= 0) {
+                            computation = 'Error';
+                        } else {
+                            computation = Math.pow(prev, 1 / current);
+                        }
+                        break;
+                    case 'logBase':
+                        if (prev <= 0 || current <= 0 || current === 1) {
+                            computation = 'Error';
+                        } else {
+                            computation = Math.log(prev) / Math.log(current);
+                        }
+                        break;
+                    default:
+                        return;
+                }
+                currentInput = computation.toString();
+                operation = '';
+                previousInput = '';
+                updateDisplay();
+                updateClearButton();
+            }
+
+            function toggleSign() {
+                if (currentInput) {
+                    currentInput = (parseFloat(currentInput) * -1).toString();
+                    updateDisplay();
+                }
+            }
+
+            function percent() {
+                if (currentInput) {
+                    currentInput = (parseFloat(currentInput) / 100).toString();
+                    updateDisplay();
+                }
+            }
+
+            function scientificFunction(funcId) {
+                let func;
+                if (funcId.startsWith('func')) {
+                    const button = document.getElementById(funcId);
+                    func = button.innerText;
+                } else {
+                    func = funcId;
+                }
+
+                let value = parseFloat(currentInput);
+                if (func === 'π') {
+                    value = Math.PI;
+                } else if (func === 'e') {
+                    value = Math.E;
+                } else if (isNaN(value)) {
+                    return;
+                }
+
+                switch (func) {
+                    case 'sin':
+                        if (angleUnit === 'Deg') {
+                            value = Math.sin(value * Math.PI / 180);
+                        } else {
+                            value = Math.sin(value);
+                        }
+                        break;
+                    case 'cos':
+                        if (angleUnit === 'Deg') {
+                            value = Math.cos(value * Math.PI / 180);
+                        } else {
+                            value = Math.cos(value);
+                        }
+                        break;
+                    case 'tan':
+                        if (angleUnit === 'Deg') {
+                            value = Math.tan(value * Math.PI / 180);
+                        } else {
+                            value = Math.tan(value);
+                        }
+                        break;
+                    case 'sin⁻¹':
+                        if (value < -1 || value > 1) {
+                            value = 'Error';
+                            break;
+                        }
+                        if (angleUnit === 'Deg') {
+                            value = Math.asin(value) * 180 / Math.PI;
+                        } else {
+                            value = Math.asin(value);
+                        }
+                        break;
+                    case 'cos⁻¹':
+                        if (value < -1 || value > 1) {
+                            value = 'Error';
+                            break;
+                        }
+                        if (angleUnit === 'Deg') {
+                            value = Math.acos(value) * 180 / Math.PI;
+                        } else {
+                            value = Math.acos(value);
+                        }
+                        break;
+                    case 'tan⁻¹':
+                        if (angleUnit === 'Deg') {
+                            value = Math.atan(value) * 180 / Math.PI;
+                        } else {
+                            value = Math.atan(value);
+                        }
+                        break;
+                    case 'ln':
+                        if (value <= 0) {
+                            value = 'Error';
+                        } else {
+                            value = Math.log(value);
+                        }
+                        break;
+                    case 'eˣ':
+                        value = Math.exp(value);
+                        break;
+                    case 'log':
+                        if (value <= 0) {
+                            value = 'Error';
+                        } else {
+                            value = Math.log10(value);
+                        }
+                        break;
+                    case 'logᵧ':
+                        if (previousInput === '') {
+                            previousInput = currentInput;
+                            currentInput = '';
+                            operation = 'logBase';
+                            return;
+                        } else {
+                            calculate();
+                            return;
+                        }
+                    case '√':
+                        if (value < 0) {
+                            value = 'Error';
+                        } else {
+                            value = Math.sqrt(value);
+                        }
+                        break;
+                    case 'x²':
+                        value = Math.pow(value, 2);
+                        break;
+                    case 'xʸ':
+                        operation = '^';
+                        previousInput = currentInput;
+                        currentInput = '';
+                        return;
+                    case 'x√y':
+                        operation = 'root';
+                        previousInput = currentInput;
+                        currentInput = '';
+                        return;
+                    default:
+                        break;
+                }
+                currentInput = value.toString();
+                updateDisplay();
+            }
+
+            function toggleAngleUnit() {
+                angleUnit = angleUnit === 'Deg' ? 'Rad' : 'Deg';
+                document.getElementById('angle-toggle').innerText = angleUnit;
+            }
+
+            function toggleSecond() {
+                secondFunction = !secondFunction;
+                const funcs = [
+                    { id: 'func1', primary: 'sin', secondary: 'sin⁻¹', titlePrimary: 'Sine Function', titleSecondary: 'Inverse Sine Function' },
+                    { id: 'func2', primary: 'cos', secondary: 'cos⁻¹', titlePrimary: 'Cosine Function', titleSecondary: 'Inverse Cosine Function' },
+                    { id: 'func3', primary: 'tan', secondary: 'tan⁻¹', titlePrimary: 'Tangent Function', titleSecondary: 'Inverse Tangent Function' },
+                    { id: 'func4', primary: 'ln', secondary: 'eˣ', titlePrimary: 'Natural Logarithm', titleSecondary: 'Exponential Function' },
+                    { id: 'func7', primary: '√', secondary: 'x²', titlePrimary: 'Square Root', titleSecondary: 'Square' },
+                    { id: 'func8', primary: 'xʸ', secondary: 'x√y', titlePrimary: 'Exponentiation', titleSecondary: 'Root' },
+                    { id: 'func9', primary: 'log', secondary: 'logᵧ', titlePrimary: 'Logarithm Base 10', titleSecondary: 'Logarithm Base y' },
+                ];
+
+                funcs.forEach(func => {
+                    const button = document.getElementById(func.id);
+                    if (secondFunction) {
+                        button.innerText = func.secondary;
+                        button.setAttribute('title', func.titleSecondary);
+                    } else {
+                        button.innerText = func.primary;
+                        button.setAttribute('title', func.titlePrimary);
+                    }
+                });
+            }
+
+            function updateClearButton() {
+                const clearButton = document.getElementById('clear-button');
+                if (currentInput !== '') {
+                    clearButton.innerText = 'C';
+                } else {
+                    clearButton.innerText = 'AC';
+                }
+            }
+
+            function memoryFunction(action) {
+                const value = parseFloat(currentInput) || 0;
+                switch (action) {
+                    case 'mc':
+                        memory = 0;
+                        break;
+                    case 'mr':
+                        currentInput = memory.toString();
+                        updateDisplay();
+                        break;
+                    case 'm+':
+                        memory += value;
+                        break;
+                    case 'm-':
+                        memory -= value;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return {
+                appendNumber,
+                clearDisplay,
+                operator,
+                calculate,
+                toggleSign,
+                percent,
+                scientificFunction,
+                toggleAngleUnit,
+                toggleSecond,
+                memoryFunction
+            };
+        })();
+    </script>
+</body>
+
+</html>

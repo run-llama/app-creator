@@ -16,6 +16,11 @@ stores the question/answer pair in the database.`,
     spec: `Create a full-stack NextJS todo app with a TailwindCSS frontend, that allows users to add, 
 remove, and mark tasks as complete. Use a Postgres database to persist the tasks.`,
     models: ["gpt-4o-mini", "gpt-4o", "o1-mini"]  // didn't complete with o1-preview
+  },
+  {
+    name: "Iphone calculator",
+    spec: `Iphone style scientific calculator in one html file, using tailwind css and javascript.`,
+    models: ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]  
   }
   // Add more specifications as needed
 ];
