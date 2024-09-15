@@ -7,12 +7,14 @@ The multi-agents are implemented using [Workflows](https://ts.llamaindex.ai/modu
 ## Getting Started
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/run-llama/app-creator.git
    cd app-creator
    ```
 
 2. Install dependencies:
+
    ```
    pnpm install
    ```

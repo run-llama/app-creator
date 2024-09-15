@@ -6,13 +6,14 @@ import {
   WorkflowEvent,
 } from "@llamaindex/core/workflow";
 import { OpenAI, Settings } from "llamaindex";
+import { PackageEvent, packager } from "./packager";
 
 const MAX_REVIEWS = 3;
 
 // Create custom event types
 export class MessageEvent extends WorkflowEvent<{ msg: string }> {}
-export class CodeEvent extends WorkflowEvent<{ code: string }> {}
-export class ReviewEvent extends WorkflowEvent<{
+class CodeEvent extends WorkflowEvent<{ code: string }> {}
+class ReviewEvent extends WorkflowEvent<{
   review: string;
   code: string;
 }> {}
@@ -88,7 +89,7 @@ const reviewer = async (context: Context, ev: CodeEvent) => {
         msg: `Reviewer says: ${review}`,
       }),
     );
-    return new StopEvent({ result: code });
+    return new PackageEvent({ code });
   }
 
   return new ReviewEvent({ review, code });
@@ -98,7 +99,10 @@ export function createAgent(model: string): Workflow {
   const codeAgent = new Workflow({ validate: true });
   codeAgent.addStep(StartEvent, architect, { outputs: CodeEvent });
   codeAgent.addStep(ReviewEvent, coder, { outputs: CodeEvent });
-  codeAgent.addStep(CodeEvent, reviewer, { outputs: ReviewEvent });
+  codeAgent.addStep(CodeEvent, reviewer, {
+    outputs: [ReviewEvent, PackageEvent],
+  });
+  codeAgent.addStep(PackageEvent, packager, { outputs: StopEvent });
 
   // Update the llm model with the provided model
   Settings.llm = new OpenAI({ model, temperature: 1 });
