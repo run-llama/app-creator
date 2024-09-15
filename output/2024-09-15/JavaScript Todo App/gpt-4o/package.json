@@ -1,0 +1,22 @@
+{
+  "name": "my-todo-app",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "prisma": "prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^3.0.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwindcss": "^2.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^3.0.0",
+    "autoprefixer": "^10.0.0",
+    "postcss": "^8.0.0"
+  }
+}

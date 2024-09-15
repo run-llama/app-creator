@@ -1,0 +1,2 @@
+# Python version required
+python_version >=3.7

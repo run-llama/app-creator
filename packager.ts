@@ -23,7 +23,7 @@ export const packager = async (context: Context, ev: PackageEvent) => {
 
   // use own llm for extracting the files
   const llm = new OpenAI({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     additionalChatOptions: { response_format: { type: "json_object" } },
   });
 

@@ -31,21 +31,32 @@ async function outputResult(
   model: string,
   packageResult: PackageResult,
 ) {
+  // Generate timestamp
+  const timestamp = new Date().toISOString().slice(0, 10);
+
   // Create output directory if it doesn't exist
-  const outputDir = path.join("output", name, model);
+  const outputDir = path.join("output", timestamp, name, model);
   await fs.mkdir(outputDir, { recursive: true });
 
-  // Iterate over all files in the packageResult and store each file with their correct path
-  for (const file of packageResult.files) {
-    const filePath = path.join(outputDir, file.path);
-    const fileDir = path.dirname(filePath);
+  try {
+    // Iterate over all files in the packageResult and store each file with their correct path
+    for (const file of packageResult.files) {
+      const filePath = path.join(outputDir, file.path);
+      const fileDir = path.dirname(filePath);
 
-    // Create directory if it doesn't exist
-    await fs.mkdir(fileDir, { recursive: true });
+      // Create directory if it doesn't exist
+      await fs.mkdir(fileDir, { recursive: true });
 
-    // Write file content
-    await fs.writeFile(filePath, file.content);
-    console.log(`File written to: ${filePath}`);
+      // Write file content
+      await fs.writeFile(filePath, file.content);
+      console.log(`File written to: ${filePath}`);
+    }
+  } catch (error) {
+    console.error("Error in outputResult:", error);
+    const errorLogPath = path.join(outputDir, "error.log");
+    const errorContent = `Error: ${error}\n\nPackageResult structure:\n${JSON.stringify(packageResult, null, 2)}`;
+    await fs.writeFile(errorLogPath, errorContent);
+    console.log(`Error details written to: ${errorLogPath}`);
   }
 }
 
