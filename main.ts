@@ -2,6 +2,7 @@ import { createAgent, MessageEvent } from "./agent";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { PackageResult } from "./packager";
+import { StopEvent } from "@llamaindex/workflow";
 
 const apps = [
   {
@@ -21,7 +22,7 @@ remove, and mark tasks as complete. Use a Postgres database to persist the tasks
   {
     name: "Iphone calculator",
     spec: `Iphone style scientific calculator in one html file, using tailwind css and javascript.`,
-    models: ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"],
+    models: ["gpt-4o-mini", "gpt-4o", "o1-mini", "o3-mini"],
   },
   // Add more specifications as needed
 ];
@@ -63,15 +64,19 @@ async function outputResult(
 async function runGeneration(name: string, spec: string, model: string) {
   console.log(`Running generation with model: ${model}`);
   const codeAgent = createAgent(model);
-  const run = codeAgent.run(spec);
-  for await (const event of codeAgent.streamEvents()) {
-    const msg = (event as MessageEvent).data.msg;
-    console.log(`${msg}\n`);
+  const run = codeAgent.run(spec).with({
+    specification: spec,
+    numberReviews: 0,
+  });
+  for await (const event of run) {
+    if (event instanceof MessageEvent) {
+      const msg = (event as MessageEvent).data.msg;
+      console.log(`${msg}\n`);
+    } else if (event instanceof StopEvent) {
+      const packageResult = (event as StopEvent<PackageResult>).data;
+      await outputResult(name, model, packageResult);
+    }
   }
-  const result = await run;
-  const packageResult = result.data.result as unknown as PackageResult;
-
-  await outputResult(name, model, packageResult);
 }
 
 async function main() {

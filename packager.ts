@@ -1,7 +1,8 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { Context, StopEvent, WorkflowEvent } from "@llamaindex/core/workflow";
+import { HandlerContext, StopEvent, WorkflowEvent } from "@llamaindex/workflow";
 import { OpenAI } from "llamaindex";
 import { z } from "zod";
+import { Context } from "./agent";
 
 export class PackageEvent extends WorkflowEvent<{
   code: string;
@@ -18,7 +19,10 @@ const PackageResultSchema = z.object({
 
 export type PackageResult = z.infer<typeof PackageResultSchema>;
 
-export const packager = async (context: Context, ev: PackageEvent) => {
+export const packager = async (
+  context: HandlerContext<Context>,
+  ev: PackageEvent,
+) => {
   const { code } = ev.data;
 
   // use own llm for extracting the files
@@ -45,6 +49,5 @@ export const packager = async (context: Context, ev: PackageEvent) => {
   const json = response.message.content as string;
   const result = PackageResultSchema.parse(JSON.parse(json));
 
-  // TODO: allow different types of outputs in LlamaIndexTS
-  return new StopEvent({ result: result as unknown as string });
+  return new StopEvent<PackageResult>(result);
 };

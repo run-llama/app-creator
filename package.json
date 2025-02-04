@@ -12,13 +12,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@llamaindex/core": "^0.2.0",
-    "llamaindex": "^0.6.0",
-    "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.23.3"
+    "@llamaindex/workflow": "^0.0.8",
+    "llamaindex": "^0.8.32",
+    "pathe": "^2.0.2",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.24.1"
   },
   "devDependencies": {
-    "prettier": "^3.3.3",
-    "tsx": "^4.19.1"
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2"
   }
 }
